@@ -1,10 +1,11 @@
-package postgres
+package rcpostgres
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -23,6 +24,13 @@ func (c *Client) DB() *gorm.DB {
 }
 
 func NewConn(ctx context.Context, cfg section.RepositoryPostgres) (*Client, error) {
+	log.Printf(
+		"HOST=%s PORT=%s USER=%s DB=%s",
+		cfg.Host,
+		cfg.Port,
+		cfg.Username,
+		cfg.Name,
+	)
 	dsn := cfg.DSN()
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

@@ -13,8 +13,8 @@ type (
 	}
 
 	RepositoryPostgres struct {
-		Host         string        `envconfig:"APP_REPOSITORY_POSTGRES_HOST"              default:"localhost"`
-		Port         string        `envconfig:"APP_REPOSITORY_POSTGRES_PORT"              default:"5432"`
+		Host         string        `envconfig:"APP_REPOSITORY_POSTGRES_HOST"`
+		Port         string        `envconfig:"APP_REPOSITORY_POSTGRES_PORT"`
 		Username     string        `envconfig:"APP_REPOSITORY_POSTGRES_USERNAME"`
 		Password     string        `envconfig:"APP_REPOSITORY_POSTGRES_PASSWORD"`
 		Name         string        `envconfig:"APP_REPOSITORY_POSTGRES_NAME"`

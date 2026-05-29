@@ -1,5 +1,21 @@
-**/*Dockerfile
+# Временные файлы и артефакты сборки
+*.log
+*.out
+*.test
+bin/
+build/
+
+# IDE и Git
+.idea/
+.vscode/
+.git/
 .gitignore
-.idea
-**/*_mock_test.go
-**/*.bindata.go
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Документация и конфигурация разработки
+README.md
+#.env
+#.env.example

@@ -1,38 +1,27 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"os"
 
-	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
 
-	"github.com/AlexBond702/order-service/internal/app/config"
-	rhealth "github.com/AlexBond702/order-service/internal/app/handler/health"
-	"github.com/AlexBond702/order-service/internal/app/processor/http"
-	"github.com/AlexBond702/order-service/internal/app/repository/postgres"
+	"github.com/AlexBond702/order-service/cmd"
 )
 
 func main() {
-	config.Load(config.LoadArgs{
-		Output:          os.Stdout,
-		EnableSimpleLog: false,
-		SkipConfig:      false,
-	})
-	cfg := config.Root
-	log.Print("Configuration loaded successfully")
-
-	pgClient, err := postgres.NewConn(context.Background(), cfg.Repository.Postgres)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed connect to PostgresSQL")
+	app := &cli.App{
+		Name:  "Order-Service",
+		Usage: "Order management service",
+		Commands: []*cli.Command{
+			cmd.WebServer(),
+		},
+		Flags: []cli.Flag{
+			&cli.BoolFlag{Name: "no-json"},
+		},
+		Version: "2.00.00",
 	}
-	log.Printf("Connected to database: %s", cfg.Repository.Postgres.Name)
-	_ = pgClient
-
-	healthHandler := rhealth.NewHealthHandler()
-
-	server := http.NewHttp(healthHandler, cfg.Processor.WebServer)
-
-	if err := server.Run(); err != nil {
-		log.Fatal().Err(err).Msg("HTTP server failed")
+	if err := app.Run(os.Args); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
 	}
 }
