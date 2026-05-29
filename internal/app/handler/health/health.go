@@ -1,4 +1,4 @@
-package rhealth
+package hhealth
 
 import (
 	"github.com/gin-gonic/gin"

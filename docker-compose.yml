@@ -7,10 +7,10 @@
 
 services:
   # ---------------------------------------------------------------------------- #
-  # PostgreSQL
+  # PostgresSQL
   # ---------------------------------------------------------------------------- #
-  postgres:
-    container_name: "mom_bp_postgres"
+  postgres_order-service:
+    container_name: "order-service_postgres"
     image: "postgres:16-alpine"
     restart: "unless-stopped"
     ports:
@@ -20,23 +20,87 @@ services:
       POSTGRES_PASSWORD: "testpass"
       POSTGRES_DB: "testdb"
     volumes:
-      - "mom_bp_postgres_data:/var/lib/postgresql/data"
+      - "order-service_data:/var/lib/postgresql/data"
     networks:
-      - "mom_bp_net"
+      - "order-service_net"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -d testdb -U testuser"]
       interval: 5s
       timeout: 5s
       retries: 5
+  postgres_catalog-service:
+    container_name: "catalog-service_postgres"
+    image: "postgres:15.1-alpine"
+    restart: "unless-stopped"
+    ports:
+        - "5429:5432"
+    environment:
+        POSTGRES_USER: "test_user"
+        POSTGRES_PASSWORD: "test_password"
+        POSTGRES_DB: "test_db"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h localhost -d test_db -U test_user" ]
+      timeout: 5s
+      interval: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+        - "catalog-service_data:/var/lib/postgresql/data"
+    networks:
+        - "catalog-service_net"
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: "order-service"
+    restart: always
+    ports:
+        - "9020:9020"
+    depends_on:
+        postgres_order-service:
+          condition: service_healthy
+        postgres_catalog-service:
+          condition: service_healthy
+    environment:
+        POSTGRES_NAME: "testdb"
+        POSTGRES_USERNAME: "testuser"
+        POSTGRES_PASSWORD: "testpass"
+        POSTGRES_HOST: "postgres_order-service"
+        POSTGRES_PORT: "5432"
+    networks:
+        - "order-service_net"
+        - "catalog-service_net"
+  catalog-service:
+    build:
+      context: ../my-awesome-service
+      dockerfile: Dockerfile
+    container_name: "catalog-service"
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres_order-service:
+        condition: service_healthy
+      postgres_catalog-service:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: "test_user"
+      POSTGRES_PASSWORD: "test_password"
+      POSTGRES_DB: "test_db"
+    networks:
+      - "catalog-service_net"
+      - "order-service_net"
 
 # ---------------------------------------------------------------------------- #
 # Volumes
 # ---------------------------------------------------------------------------- #
 volumes:
-  mom_bp_postgres_data: {}
+  order-service_data: { }
+  catalog-service_data: { }
 
 # ---------------------------------------------------------------------------- #
 # Networks
 # ---------------------------------------------------------------------------- #
 networks:
-  mom_bp_net: {}
+  order-service_net: { }
+  catalog-service_net: { }

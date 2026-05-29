@@ -1,10 +1,12 @@
 # =============================================================================
 # Переменные
 # =============================================================================
+-include .env
 OUTPUT := ./bin/app
 GO_LINT_VERSION := 2.7.2
 GO_FILE := ./main.go
-
+CUR_MIGRATION_DIR=$(MIGRATION_DIR)
+MIGRATION_DSN="postgres://$(APP_REPOSITORY_POSTGRES_USERNAME):$(APP_REPOSITORY_POSTGRES_PASSWORD)@$(APP_REPOSITORY_POSTGRES_HOST):$(APP_REPOSITORY_POSTGRES_PORT)/$(APP_REPOSITORY_POSTGRES_NAME)?sslmode=$(APP_REPOSITORY_POSTGRES_SSL_MODE)"
 # =============================================================================
 # Справка
 # =============================================================================
@@ -17,11 +19,11 @@ help: ## Показать справку
 # =============================================================================
 .PHONY: run
 run: ## Запустить приложение
-	go run ${GO_FILE}
+	go run {GO_FILE}
 
 .PHONY: build
 build: ## Сборка приложения
-	go build -o ${OUTPUT} ${GO_FILE}
+	go build -o ${OUTPUT} ${GO_FILE} && go run ${GO_FILE}
 
 .PHONY: test
 test: ## Запуск тестов
@@ -66,10 +68,18 @@ mod-check: ## Проверка актуальности go.mod/go.sum
 	go mod tidy
 	@FILES="go.mod"; [ -f go.sum ] && FILES="$$FILES go.sum"; git diff --exit-code -- $$FILES || (echo "go.mod/go.sum не синхронизированы. Запустите 'go mod tidy'" && exit 1)
 
+.PHONY: migrate-up
+migrate-up:
+	@migrate -database $(MIGRATION_DSN) -path $(CUR_MIGRATION_DIR) up
+
+.PHONY: migrate-down
+migrate-down:
+	@migrate -database $(MIGRATION_DSN) -path $(CUR_MIGRATION_DIR) down -all
 # =============================================================================
 # CI
 # =============================================================================
 .PHONY: ci
+
 ci: ## Запустить все CI проверки
 	@echo "=== Mod Check ==="
 	go mod tidy
