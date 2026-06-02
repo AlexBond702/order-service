@@ -15,9 +15,14 @@ import (
 	"github.com/AlexBond702/order-service/internal/app/config"
 	rhandler "github.com/AlexBond702/order-service/internal/app/handler"
 	hhealth "github.com/AlexBond702/order-service/internal/app/handler/health"
+	horder "github.com/AlexBond702/order-service/internal/app/handler/order"
+	"github.com/AlexBond702/order-service/internal/app/module"
+	morder "github.com/AlexBond702/order-service/internal/app/module/order"
 	"github.com/AlexBond702/order-service/internal/app/processor"
 	rprocessor "github.com/AlexBond702/order-service/internal/app/processor/http"
+	"github.com/AlexBond702/order-service/internal/app/repository"
 	rcpostgres "github.com/AlexBond702/order-service/internal/app/repository/conn/postgres"
+	porder "github.com/AlexBond702/order-service/internal/app/repository/order"
 )
 
 type Builder struct {
@@ -27,9 +32,10 @@ type Builder struct {
 	err  error
 	cfg  config.Config
 
-	connPostgres *rcpostgres.Client
-	// orderRepo    repository.Order
-
+	connPostgres  *rcpostgres.Client
+	orderRepo     repository.Order
+	orderModule   module.Order
+	orderHandler  rhandler.Order
 	healthHandler rhandler.Health
 
 	processors []processor.Processor
@@ -79,6 +85,29 @@ func (b *Builder) BuildConfigSimple(injectors ...func(c *config.Config)) {
 	})
 }
 
+func (b *Builder) BuildRepoOrder(injectors ...func(c *config.Config)) {
+	b.exec(func(b *Builder) {
+		repoOrder, err := porder.NewOrderRepo(b.ctx, b.connPostgres)
+		if err != nil {
+			b.err = err
+		}
+		b.orderRepo = repoOrder
+	}, b.connPostgres)
+}
+
+func (b *Builder) BuildModuleOrder(injectors ...func(c *config.Config)) {
+	b.exec(func(b *Builder) {
+		repoModule := morder.NewModule(b.orderRepo)
+		b.orderModule = repoModule
+	}, b.orderRepo)
+}
+
+func (b *Builder) BuildHandlerHttpOrder() {
+	b.exec(func(b *Builder) {
+		b.orderHandler = horder.NewHandler(b.orderModule)
+	}, b.orderModule)
+}
+
 func (b *Builder) Run() {
 	if b.err != nil {
 		log.Fatal().Err(b.err).Msg("Failed to initialize application")
@@ -95,9 +124,9 @@ func (b *Builder) Run() {
 
 func (b *Builder) BuildProcHttp() {
 	b.exec(func(b *Builder) {
-		procHttp := rprocessor.NewHttp(b.healthHandler, b.cfg.Processor.WebServer)
+		procHttp := rprocessor.NewHttp(b.healthHandler, b.orderHandler, b.cfg.Processor.WebServer)
 		b.processors = append(b.processors, procHttp)
-	}, b.healthHandler)
+	}, b.healthHandler, b.orderHandler)
 }
 
 func (b *Builder) buildConfig(args config.LoadArgs, injectors []func(*config.Config)) {
