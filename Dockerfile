@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 
-RUN go build -o main .
+RUN go build -o app .
 
 
 FROM alpine:latest
@@ -23,7 +23,7 @@ FROM alpine:latest
 WORKDIR /app
 
 
-COPY --from=builder /app/main .
+COPY --from=builder /app/app .
 
 
 COPY .env .
@@ -32,4 +32,4 @@ COPY .env .
 EXPOSE 9020
 
 
-ENTRYPOINT ["./main"]
+ENTRYPOINT ["./app","web-server"]

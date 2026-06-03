@@ -25,6 +25,7 @@ type Processor struct {
 }
 
 func NewHttp(hHealth rhandler.Health,
+	hOrder rhandler.Order,
 	cfg section.ProcessorWebServer,
 ) *Processor {
 	router := gin.Default()
@@ -36,6 +37,10 @@ func NewHttp(hHealth rhandler.Health,
 	)
 
 	GenericRegHealthCheck(router, hHealth)
+	v1 := router.Group("/v1")
+	{
+		v1GenericRegOrder(v1, hOrder)
+	}
 
 	logRoutes(router)
 
