@@ -28,3 +28,5 @@ coverage.out
 # чтобы студенты могли видеть пример конфигурации.
 # .env
 .env
+proto_deps/
+intenal/proto_deps

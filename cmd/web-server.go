@@ -33,6 +33,8 @@ func cmdWebServer(cCtx *cli.Context) error {
 	app.BuildConfig()
 	app.BuildRepoConnPostgres()
 
+	app.BuildCatalogClient()
+
 	app.BuildRepoOrder()
 	app.BuildModuleOrder()
 	app.BuildHandlerHttpOrder()
