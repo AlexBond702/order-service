@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+
+
+import "google/api/annotations.proto";
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "catalog-service/gen/proto/catalog/v1";
+
+service CatalogService{
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
+    option (google.api.http) = {
+      get : "/v1/catalog/product/{guid}"
+    };
+  }
+
+
+  rpc GetProducts(GetProductsRequest) returns (GetProductsResponse) {
+    option (google.api.http) = {
+      post: "/v1/catalog/products/list"
+      body: "*"
+    };
+  }
+
+
+  rpc CheckProductExists(CheckProductExistsRequest) returns (CheckProductExistsResponse) {
+    option (google.api.http) = {
+      get: "/v1/catalog/products/{guid}/exists"
+    };
+  }
+}
+
+message GetProductRequest{
+  string guid = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+message GetProductsRequest {
+  repeated string guids = 1 [
+    (buf.validate.field).repeated.items.string.uuid = true,
+    (buf.validate.field).repeated.min_items= 1
+  ];
+}
+message CheckProductExistsRequest {
+  string guid = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+message GetProductsResponse {
+  repeated Product products = 1;
+}
+message CheckProductExistsResponse {
+  Product product = 1;
+}
+
+message Product {
+  int64 id = 1;
+  string guid = 2;
+  string name = 3;
+  optional string description = 4;
+  double price = 5;
+  string categoryGuid = 6;
+  google.protobuf.Timestamp createdAt = 7;
+  google.protobuf.Timestamp updatedAt = 8;
+}

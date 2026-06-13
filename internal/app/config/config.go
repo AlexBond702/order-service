@@ -19,6 +19,7 @@ type (
 		// Broker     section.Broker
 		Processor section.Processor
 		Monitor   section.Monitor
+		Client    section.Client
 	}
 	LoadArgs struct {
 		Output          io.Writer `json:"-"`

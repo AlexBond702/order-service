@@ -1,0 +1,6 @@
+[submodule "proto_deps/googleapis"]
+	path = proto_deps/googleapis
+	url = https://github.com/googleapis/googleapis.git
+[submodule "proto_deps/protovalidate"]
+	path = proto_deps/protovalidate
+	url = https://github.com/bufbuild/protovalidate.git

@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 
+	"github.com/AlexBond702/order-service/internal/app/client"
 	"github.com/AlexBond702/order-service/internal/app/config"
 	rhandler "github.com/AlexBond702/order-service/internal/app/handler"
 	hhealth "github.com/AlexBond702/order-service/internal/app/handler/health"
@@ -37,6 +38,8 @@ type Builder struct {
 	orderModule   module.Order
 	orderHandler  rhandler.Order
 	healthHandler rhandler.Health
+
+	clientCatalog *client.CatalogClient
 
 	processors []processor.Processor
 
@@ -64,12 +67,12 @@ func NewBuilder(cCtx *cli.Context) *Builder {
 func (b *Builder) BuildRepoConnPostgres() {
 	b.exec(func(b *Builder) {
 		configDB := b.cfg.Repository.Postgres
-		client, err := rcpostgres.NewConn(b.ctx, configDB)
+		clientRepo, err := rcpostgres.NewConn(b.ctx, configDB)
 		if err != nil {
 			b.err = err
 			return
 		}
-		b.connPostgres = client
+		b.connPostgres = clientRepo
 	})
 }
 
@@ -97,7 +100,7 @@ func (b *Builder) BuildRepoOrder(injectors ...func(c *config.Config)) {
 
 func (b *Builder) BuildModuleOrder(injectors ...func(c *config.Config)) {
 	b.exec(func(b *Builder) {
-		repoModule := morder.NewModule(b.orderRepo)
+		repoModule := morder.NewModule(b.orderRepo, b.clientCatalog)
 		b.orderModule = repoModule
 	}, b.orderRepo)
 }
@@ -108,9 +111,28 @@ func (b *Builder) BuildHandlerHttpOrder() {
 	}, b.orderModule)
 }
 
+func (b *Builder) BuildCatalogClient() {
+	b.exec(func(b *Builder) {
+		CatalogAddr := b.cfg.Client.Catalog.GrpcAddr
+		clientCatalog, err := client.NewCatalogClient(CatalogAddr)
+		if err != nil {
+			b.err = fmt.Errorf("failed to create catalog client: %w", err)
+			return
+		}
+		b.clientCatalog = clientCatalog
+	}, b.cfg)
+}
+
 func (b *Builder) Run() {
+	defer func() {
+		if b.clientCatalog != nil {
+			if err := b.clientCatalog.Close(); err != nil {
+				log.Printf("Error closing catalog client: %v", err)
+			}
+		}
+	}()
 	if b.err != nil {
-		log.Fatal().Err(b.err).Msg("Failed to initialize application")
+		log.Error().Err(b.err).Msg("Failed to initialize application")
 	} else {
 		log.Info().Msg("Application is initialized")
 	}
