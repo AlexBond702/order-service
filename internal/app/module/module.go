@@ -2,9 +2,9 @@ package module
 
 import (
 	"context"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/AlexBond702/order-service/internal/app/entity"
 )

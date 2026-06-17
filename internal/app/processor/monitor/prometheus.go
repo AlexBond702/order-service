@@ -2,13 +2,15 @@ package monitor
 
 import (
 	"context"
-	service "github.com/AlexBond702/order-service/internal/app/module"
-	"github.com/AlexBond702/order-service/internal/app/processor"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	service "github.com/AlexBond702/order-service/internal/app/module"
+	"github.com/AlexBond702/order-service/internal/app/processor"
 )
 
 type promProc struct {
@@ -43,6 +45,7 @@ func NewPrometheusObserver(tasks ...service.Metered) processor.Processor {
 		chCb:  make(chan func(ctx context.Context), 2048),
 	}
 }
+
 func (p *promProc) StartAsync(ctx context.Context, wg *sync.WaitGroup) {
 	nowUnix := time.Now().UnixNano()
 

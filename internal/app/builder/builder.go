@@ -3,7 +3,6 @@ package builder
 import (
 	"context"
 	"fmt"
-	"github.com/AlexBond702/order-service/internal/app/processor/monitor"
 	"os"
 	"os/signal"
 	"reflect"
@@ -22,6 +21,7 @@ import (
 	morder "github.com/AlexBond702/order-service/internal/app/module/order"
 	"github.com/AlexBond702/order-service/internal/app/processor"
 	rprocessor "github.com/AlexBond702/order-service/internal/app/processor/http"
+	"github.com/AlexBond702/order-service/internal/app/processor/monitor"
 	"github.com/AlexBond702/order-service/internal/app/repository"
 	rcpostgres "github.com/AlexBond702/order-service/internal/app/repository/conn/postgres"
 	porder "github.com/AlexBond702/order-service/internal/app/repository/order"
@@ -151,6 +151,7 @@ func (b *Builder) BuildProcHttp() {
 		b.processors = append(b.processors, procHttp)
 	}, b.healthHandler, b.orderHandler)
 }
+
 func (b *Builder) BuildMonitorPrometheus() {
 	b.exec(func(b *Builder) {
 		if !b.cfg.Monitor.Prometheus.Enabled {
