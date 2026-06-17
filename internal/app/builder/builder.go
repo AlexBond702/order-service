@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"fmt"
+	"github.com/AlexBond702/order-service/internal/app/processor/monitor"
 	"os"
 	"os/signal"
 	"reflect"
@@ -149,6 +150,15 @@ func (b *Builder) BuildProcHttp() {
 		procHttp := rprocessor.NewHttp(b.healthHandler, b.orderHandler, b.cfg.Processor.WebServer)
 		b.processors = append(b.processors, procHttp)
 	}, b.healthHandler, b.orderHandler)
+}
+func (b *Builder) BuildMonitorPrometheus() {
+	b.exec(func(b *Builder) {
+		if !b.cfg.Monitor.Prometheus.Enabled {
+			log.Warn().Msg("false prometheus enabled")
+		}
+		prometheus := monitor.NewPrometheusObserver()
+		b.processors = append(b.processors, prometheus)
+	})
 }
 
 func (b *Builder) buildConfig(args config.LoadArgs, injectors []func(*config.Config)) {

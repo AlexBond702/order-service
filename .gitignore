@@ -30,3 +30,4 @@ coverage.out
 .env
 proto_deps/
 intenal/proto_deps
+.env.docker

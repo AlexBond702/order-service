@@ -61,6 +61,9 @@ func Load(args LoadArgs) {
 
 	log.Logger = createLogger(level, args.Output)
 	log.Info().Msgf("Logger initialized with %s level", level)
+	if Root.Monitor.Prometheus.Enabled {
+		log.Info().Msg("Prometheus metrics enabled")
+	}
 }
 
 func createLogger(level zerolog.Level, output io.Writer) zerolog.Logger {

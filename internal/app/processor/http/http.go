@@ -37,6 +37,7 @@ func NewHttp(hHealth rhandler.Health,
 	)
 
 	GenericRegHealthCheck(router, hHealth)
+	GenericRegMetrics(router)
 	v1 := router.Group("/v1")
 	{
 		v1GenericRegOrder(v1, hOrder)
