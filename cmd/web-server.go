@@ -39,6 +39,8 @@ func cmdWebServer(cCtx *cli.Context) error {
 	app.BuildModuleOrder()
 	app.BuildHandlerHttpOrder()
 
+	app.BuildMonitorPrometheus()
+
 	app.BuildProcHttp()
 	app.Run()
 	return nil
