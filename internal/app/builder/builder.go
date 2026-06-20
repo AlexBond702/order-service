@@ -156,6 +156,7 @@ func (b *Builder) BuildMonitorPrometheus() {
 	b.exec(func(b *Builder) {
 		if !b.cfg.Monitor.Prometheus.Enabled {
 			log.Warn().Msg("false prometheus enabled")
+			return
 		}
 		prometheus := monitor.NewPrometheusObserver()
 		b.processors = append(b.processors, prometheus)
