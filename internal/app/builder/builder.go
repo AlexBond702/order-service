@@ -155,7 +155,7 @@ func (b *Builder) BuildProcHttp() {
 func (b *Builder) BuildMonitorPrometheus() {
 	b.exec(func(b *Builder) {
 		if !b.cfg.Monitor.Prometheus.Enabled {
-			log.Warn().Msg("false prometheus enabled")
+			log.Warn().Msg("Prometheus metrics disabled")
 			return
 		}
 		prometheus := monitor.NewPrometheusObserver()

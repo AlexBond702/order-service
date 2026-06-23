@@ -35,7 +35,7 @@ func NewPrometheusObserver(tasks ...service.Metered) processor.Processor {
 				continue
 			}
 			promTasks = append(promTasks, promProcTask{
-				Period:   int64(metric.Period.Seconds()),
+				Period:   max(metric.Period, 1*time.Second).Nanoseconds(),
 				Callback: metric.Callback,
 			})
 		}
