@@ -26,7 +26,6 @@ WORKDIR /app
 COPY --from=builder /app/app .
 
 
-COPY .env .
 
 
 EXPOSE 9020

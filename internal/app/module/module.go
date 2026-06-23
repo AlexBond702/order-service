@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/AlexBond702/order-service/internal/app/entity"
 )
@@ -13,4 +14,7 @@ type Order interface {
 	Get(ctx context.Context, id int64) (entity.Order, error)
 	Update(ctx context.Context, id int64, status string) (entity.ResponseOrderUpdate, error)
 	Delete(ctx context.Context, id int64) error
+}
+type Metered interface {
+	ProvideMetrics(fact promauto.Factory) []entity.MetricObservation
 }

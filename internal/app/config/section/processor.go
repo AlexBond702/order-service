@@ -8,7 +8,7 @@ type (
 	}
 	ProcessorWebServer struct {
 		ListenPort uint32        `required:"true" default:"9020" split_words:"true"`
-		Host       string        `required:"true" default:"localhost"`
+		Host       string        `required:"true" default:"0.0.0.0"`
 		Timeout    time.Duration `required:"true" default:"3s"`
 	}
 )
