@@ -21,6 +21,7 @@ import (
 	morder "github.com/AlexBond702/order-service/internal/app/module/order"
 	"github.com/AlexBond702/order-service/internal/app/processor"
 	rprocessor "github.com/AlexBond702/order-service/internal/app/processor/http"
+	"github.com/AlexBond702/order-service/internal/app/processor/monitor"
 	"github.com/AlexBond702/order-service/internal/app/repository"
 	rcpostgres "github.com/AlexBond702/order-service/internal/app/repository/conn/postgres"
 	porder "github.com/AlexBond702/order-service/internal/app/repository/order"
@@ -149,6 +150,17 @@ func (b *Builder) BuildProcHttp() {
 		procHttp := rprocessor.NewHttp(b.healthHandler, b.orderHandler, b.cfg.Processor.WebServer)
 		b.processors = append(b.processors, procHttp)
 	}, b.healthHandler, b.orderHandler)
+}
+
+func (b *Builder) BuildMonitorPrometheus() {
+	b.exec(func(b *Builder) {
+		if !b.cfg.Monitor.Prometheus.Enabled {
+			log.Warn().Msg("Prometheus metrics disabled")
+			return
+		}
+		prometheus := monitor.NewPrometheusObserver()
+		b.processors = append(b.processors, prometheus)
+	})
 }
 
 func (b *Builder) buildConfig(args config.LoadArgs, injectors []func(*config.Config)) {
