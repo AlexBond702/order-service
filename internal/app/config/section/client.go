@@ -5,5 +5,5 @@ type Client struct {
 }
 
 type ClientCatalog struct {
-	GrpcAddr string `envconfig:"CATALOG_SERVICE_GRPC_ADDR" default:"localhost:50051"`
+	GrpcAddr string `envconfig:"CATALOG_SERVICE_GRPC_ADDR" default:"catalog-service:50051"`
 }
