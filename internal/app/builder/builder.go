@@ -21,7 +21,7 @@ import (
 	morder "github.com/AlexBond702/order-service/internal/app/module/order"
 	"github.com/AlexBond702/order-service/internal/app/processor"
 	rprocessor "github.com/AlexBond702/order-service/internal/app/processor/http"
-	"github.com/AlexBond702/order-service/internal/app/processor/monitor"
+	"github.com/AlexBond702/order-service/internal/app/processor/monitor/metric"
 	"github.com/AlexBond702/order-service/internal/app/repository"
 	rcpostgres "github.com/AlexBond702/order-service/internal/app/repository/conn/postgres"
 	porder "github.com/AlexBond702/order-service/internal/app/repository/order"
@@ -158,7 +158,7 @@ func (b *Builder) BuildMonitorPrometheus() {
 			log.Warn().Msg("Prometheus metrics disabled")
 			return
 		}
-		prometheus := monitor.NewPrometheusObserver()
+		prometheus := metric.NewPrometheusObserver()
 		b.processors = append(b.processors, prometheus)
 	})
 }

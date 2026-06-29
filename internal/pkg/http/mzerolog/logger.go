@@ -99,5 +99,6 @@ func (m *middleware) Callback(c *gin.Context) {
 	ev.Err(err).
 		Str("exec_time", execTime.String()).
 		Str("client_ip", r.RemoteAddr).
+		Int("http_status_code", c.Writer.Status()).
 		Msg(mb.String())
 }

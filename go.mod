@@ -4,6 +4,8 @@ go 1.25.0
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
+	github.com/getsentry/sentry-go v0.46.2
+	github.com/getsentry/sentry-go/zerolog v0.46.2
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-playground/form/v4 v4.3.0
 	github.com/go-playground/locales v0.14.1
@@ -25,6 +27,7 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
