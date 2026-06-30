@@ -25,9 +25,11 @@ type Options struct {
 func Init(cfg section.MonitorSentry, opts Options) (io.Writer, bool) {
 	if !cfg.Enabled {
 		log.Warn().Msg("Sentry is disabled by config")
+		return nil, false
 	}
 	if cfg.DSN == "" {
 		log.Warn().Msg("Sentry DSN is empty, integration is skipped")
+		return nil, false
 	}
 	if err := sentryGo.Init(sentryGo.ClientOptions{
 		Dsn:              cfg.DSN,
@@ -39,7 +41,7 @@ func Init(cfg section.MonitorSentry, opts Options) (io.Writer, bool) {
 		return nil, false
 	}
 	sentryGo.ConfigureScope(func(scope *sentryGo.Scope) {
-		scope.SetTag("order-service", opts.ServiceName)
+		scope.SetTag("service", opts.ServiceName)
 	})
 	level := []zerolog.Level{
 		zerolog.ErrorLevel,
