@@ -37,7 +37,7 @@ func Init(cfg section.MonitorSentry, opts Options) (io.Writer, bool) {
 		Release:          opts.Release,
 		AttachStacktrace: true,
 	}); err != nil {
-		log.Error().Msg("Failed to initialize Sentry; running without it")
+		log.Error().Err(err).Msg("Failed to initialize Sentry; running without it")
 		return nil, false
 	}
 	sentryGo.ConfigureScope(func(scope *sentryGo.Scope) {
@@ -54,7 +54,7 @@ func Init(cfg section.MonitorSentry, opts Options) (io.Writer, bool) {
 		FlushTimeout:    flushTimeout,
 	})
 	if err != nil {
-		log.Error().Msg("Failed to create Sentry writer; running without it")
+		log.Error().Err(err).Msg("Failed to create Sentry writer; running without it")
 		return nil, false
 	}
 	enabled = true

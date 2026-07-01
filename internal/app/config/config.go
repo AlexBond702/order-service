@@ -11,7 +11,7 @@ import (
 
 	"github.com/AlexBond702/order-service/internal/app/config/section"
 	"github.com/AlexBond702/order-service/internal/app/constant"
-	msentry "github.com/AlexBond702/order-service/internal/app/processor/monitor/sentry"
+	msentry "github.com/AlexBond702/order-service/internal/app/monitor/sentry"
 )
 
 type (
