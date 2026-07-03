@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/AlexBond702/order-service/internal/app/config/section"
+	"github.com/AlexBond702/order-service/internal/app/constant"
+	msentry "github.com/AlexBond702/order-service/internal/app/monitor/sentry"
 )
 
 type (
@@ -52,14 +54,22 @@ func Load(args LoadArgs) {
 	if err := envconfig.Process("APP", &Root); err != nil {
 		log.Fatal().Err(err).Msg("Failed to parse")
 	}
-	level := zerolog.DebugLevel
-	if levelLog, err := zerolog.ParseLevel(Root.Monitor.LogLevel); err == nil {
-		level = levelLog
-	} else {
-		log.Warn().Msgf("failed parsing level: %s", level)
+	level, err := zerolog.ParseLevel(Root.Monitor.LogLevel)
+	if err != nil {
+		log.Warn().Str("log_level", Root.Monitor.LogLevel).Msg("Unknown log level, using debug")
+		level = zerolog.DebugLevel
+	}
+	output := args.Output
+	w, ok := msentry.Init(Root.Monitor.Sentry, msentry.Options{
+		Release:     constant.Version,
+		Environment: Root.Monitor.Environment,
+		ServiceName: constant.AppName,
+	})
+	if ok {
+		output = zerolog.MultiLevelWriter(args.Output, w)
 	}
 
-	log.Logger = createLogger(level, args.Output)
+	log.Logger = createLogger(level, output)
 	log.Info().Msgf("Logger initialized with %s level", level)
 	if Root.Monitor.Prometheus.Enabled {
 		log.Info().Msg("Prometheus metrics enabled")
