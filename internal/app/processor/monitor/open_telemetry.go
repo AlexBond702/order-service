@@ -64,11 +64,13 @@ func NewOpenTelemetryController(
 		return nil, fmt.Errorf("create gRPC client for Jaeger: %w", err)
 	}
 	if err := waitForReady(ctx, client); err != nil {
+		_ = client.Close()
 		return nil, fmt.Errorf("connect to Jaeger at %s: %w", cfg.Address, err)
 	}
 	p.conn = client
 	newconn, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(client))
 	if err != nil {
+		_ = client.Close()
 		return nil, fmt.Errorf("create OTLP exporter: %w", err)
 	}
 	cfg.SampleRatio = min(1, max(0, cfg.SampleRatio))
@@ -96,7 +98,7 @@ func NewOpenTelemetryController(
 	))
 	otel.SetErrorHandler(openTelemetryErrorHandler{})
 	log.Info().Str("service", constant.AppName).
-		Str("environment", cfg.Address).
+		Str("environment", env).
 		Msg("OpenTelemetry has been initialized")
 
 	return &p, nil
