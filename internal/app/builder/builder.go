@@ -14,6 +14,7 @@ import (
 
 	"github.com/AlexBond702/order-service/internal/app/client"
 	"github.com/AlexBond702/order-service/internal/app/config"
+	"github.com/AlexBond702/order-service/internal/app/constant"
 	rhandler "github.com/AlexBond702/order-service/internal/app/handler"
 	hhealth "github.com/AlexBond702/order-service/internal/app/handler/health"
 	horder "github.com/AlexBond702/order-service/internal/app/handler/order"
@@ -22,17 +23,19 @@ import (
 	"github.com/AlexBond702/order-service/internal/app/monitor/metric"
 	"github.com/AlexBond702/order-service/internal/app/processor"
 	rprocessor "github.com/AlexBond702/order-service/internal/app/processor/http"
+	mmonitor "github.com/AlexBond702/order-service/internal/app/processor/monitor"
 	"github.com/AlexBond702/order-service/internal/app/repository"
 	rcpostgres "github.com/AlexBond702/order-service/internal/app/repository/conn/postgres"
 	porder "github.com/AlexBond702/order-service/internal/app/repository/order"
 )
 
 type Builder struct {
-	cCtx *cli.Context
-	ctx  context.Context
-	wg   sync.WaitGroup
-	err  error
-	cfg  config.Config
+	cCtx            *cli.Context
+	ctx             context.Context
+	wg              sync.WaitGroup
+	err             error
+	cfg             config.Config
+	otelServiceName string
 
 	connPostgres  *rcpostgres.Client
 	orderRepo     repository.Order
@@ -147,7 +150,7 @@ func (b *Builder) Run() {
 
 func (b *Builder) BuildProcHttp() {
 	b.exec(func(b *Builder) {
-		procHttp := rprocessor.NewHttp(b.healthHandler, b.orderHandler, b.cfg.Processor.WebServer)
+		procHttp := rprocessor.NewHttp(b.otelServiceName, b.healthHandler, b.orderHandler, b.cfg.Processor.WebServer)
 		b.processors = append(b.processors, procHttp)
 	}, b.healthHandler, b.orderHandler)
 }
@@ -160,6 +163,23 @@ func (b *Builder) BuildMonitorPrometheus() {
 		}
 		prometheus := metric.NewPrometheusObserver()
 		b.processors = append(b.processors, prometheus)
+	})
+}
+
+func (b *Builder) BuildMonitorOpenTelemetry() {
+	cfg := b.cfg.Monitor.OpenTelemetry
+	if !cfg.Enabled {
+		log.Warn().Msg("OpenTelemetry is disabled by config")
+		return
+	}
+	b.exec(func(b *Builder) {
+		proc, err := mmonitor.NewOpenTelemetryController(b.ctx, b.cfg.Monitor.Environment, cfg)
+		if err != nil {
+			b.err = fmt.Errorf("init OpenTelemetry: %w", err)
+			return
+		}
+		b.processors = append(b.processors, proc)
+		b.otelServiceName = constant.AppName
 	})
 }
 
