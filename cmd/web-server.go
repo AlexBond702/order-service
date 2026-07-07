@@ -31,6 +31,7 @@ func WebServer() *cli.Command {
 func cmdWebServer(cCtx *cli.Context) error {
 	app := builder.NewBuilder(cCtx)
 	app.BuildConfig()
+	app.BuildMonitorOpenTelemetry()
 	app.BuildRepoConnPostgres()
 
 	app.BuildCatalogClient()

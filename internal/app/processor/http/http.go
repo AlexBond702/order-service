@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/AlexBond702/order-service/internal/app/config/section"
 	rhandler "github.com/AlexBond702/order-service/internal/app/handler"
@@ -24,11 +25,22 @@ type Processor struct {
 	processor.Processor
 }
 
-func NewHttp(hHealth rhandler.Health,
+func NewHttp(
+	otelServiceName string,
+	hHealth rhandler.Health,
 	hOrder rhandler.Order,
 	cfg section.ProcessorWebServer,
 ) *Processor {
-	router := gin.Default()
+	router := gin.New()
+	if otelServiceName != "" {
+		router.Use(otelgin.Middleware(
+			otelServiceName,
+			otelgin.WithFilter(func(r *http.Request) bool {
+				return !util.IsFilteredHttpRoute(r)
+			}),
+		))
+	}
+
 	router.Use(
 		httph.NewErrorMiddleware(),
 		mzerolog.NewMiddleware(
