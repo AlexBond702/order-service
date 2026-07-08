@@ -12,6 +12,7 @@ import (
 	"github.com/AlexBond702/order-service/internal/app/config/section"
 	"github.com/AlexBond702/order-service/internal/app/constant"
 	msentry "github.com/AlexBond702/order-service/internal/app/monitor/sentry"
+	mtracelog "github.com/AlexBond702/order-service/internal/app/monitor/tracelog"
 )
 
 type (
@@ -77,5 +78,10 @@ func Load(args LoadArgs) {
 }
 
 func createLogger(level zerolog.Level, output io.Writer) zerolog.Logger {
-	return zerolog.New(output).Level(level).With().Timestamp().Logger()
+	return zerolog.New(output).
+		Level(level).
+		Hook(mtracelog.Hook{}).
+		With().
+		Timestamp().
+		Logger()
 }

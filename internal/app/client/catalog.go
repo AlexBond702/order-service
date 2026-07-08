@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,7 +23,9 @@ type CatalogClient struct {
 }
 
 func NewCatalogClient(addr string) (*CatalogClient, error) {
-	conn, err := grpc.NewClient(addr,
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithChainUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
 		grpc.WithChainStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
