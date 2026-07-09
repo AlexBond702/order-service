@@ -97,6 +97,7 @@ func (m *middleware) Callback(c *gin.Context) {
 	m.applyExtractors(r, ev, extString, extAny)
 
 	ev.Err(err).
+		Ctx(r.Context()).
 		Str("exec_time", execTime.String()).
 		Str("client_ip", r.RemoteAddr).
 		Int("http_status_code", c.Writer.Status()).

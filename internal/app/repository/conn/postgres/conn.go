@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -35,6 +36,9 @@ func NewConn(ctx context.Context, cfg section.RepositoryPostgres) (*Client, erro
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+	}
+	if err := db.Use(otelgorm.NewPlugin(otelgorm.WithDBName(cfg.Name))); err != nil {
+		return nil, fmt.Errorf("otelgorm plugin: %w", err)
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
