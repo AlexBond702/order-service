@@ -49,6 +49,7 @@ func NewHttp(
 	)
 
 	GenericRegHealthCheck(router, hHealth)
+	GenericRegPprof(router)
 	GenericRegMetrics(router)
 	v1 := router.Group("/v1")
 	{
