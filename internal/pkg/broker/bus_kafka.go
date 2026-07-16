@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/AlexBond702/order-service/internal/pkg/broker/codec"
@@ -66,7 +66,7 @@ func getEventId[T any](v *T) string {
 			return key
 		}
 	}
-	return uuid.Must(uuid.NewV6()).String()
+	return uuid.Must(uuid.NewV4()).String()
 }
 
 func (b *kafkaBus[T]) Send(_ context.Context, msg *T, headers ...Header) error {
@@ -76,8 +76,8 @@ func (b *kafkaBus[T]) Send(_ context.Context, msg *T, headers ...Header) error {
 	}
 	key := getEventId(msg)
 	headerSl := make([]sarama.RecordHeader, 0, len(headers))
-	for _, header := range headers {
-		if len(headers) > 0 {
+	if len(headers) > 0 {
+		for _, header := range headers {
 			headerSl = append(headerSl, sarama.RecordHeader{
 				Key:   []byte(header.Key),
 				Value: []byte(header.Value),

@@ -57,9 +57,9 @@ func (m *BusMock[T]) Close() error {
 	return nil
 }
 func (m *BusMock[T]) GetSentMessages() []SentMessage[T] {
-	out := make([]SentMessage[T], len(m.SentMessages))
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	out := make([]SentMessage[T], len(m.SentMessages))
 	copy(out, m.SentMessages)
 	return out
 }

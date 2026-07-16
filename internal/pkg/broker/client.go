@@ -35,12 +35,12 @@ func NewKafkaClient(cfg KafkaConfig) (*KafkaClient, error) {
 
 	saramaClient, err := sarama.NewClient(cfg.Addresses, saramaCfg)
 	if err != nil {
-		return nil, fmt.Errorf("broker: create new client: %w", err) ////
+		return nil, fmt.Errorf("broker: create new client: %w", err)
 	}
 	producer, err := sarama.NewSyncProducerFromClient(saramaClient)
 	if err != nil {
 		_ = saramaClient.Close()
-		return nil, err
+		return nil, fmt.Errorf("broker: create new producer: %w", err)
 	}
 	return &KafkaClient{
 		client:               saramaClient,
