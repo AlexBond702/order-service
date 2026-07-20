@@ -3,7 +3,7 @@ package module
 import (
 	"context"
 
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/AlexBond702/order-service/internal/app/entity"

@@ -9,24 +9,29 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 
 	"github.com/AlexBond702/order-service/internal/app/client"
 	"github.com/AlexBond702/order-service/internal/app/config"
 	"github.com/AlexBond702/order-service/internal/app/constant"
+	"github.com/AlexBond702/order-service/internal/app/entity"
 	rhandler "github.com/AlexBond702/order-service/internal/app/handler"
 	hhealth "github.com/AlexBond702/order-service/internal/app/handler/health"
 	horder "github.com/AlexBond702/order-service/internal/app/handler/order"
 	"github.com/AlexBond702/order-service/internal/app/module"
 	morder "github.com/AlexBond702/order-service/internal/app/module/order"
-	"github.com/AlexBond702/order-service/internal/app/monitor/metric"
+	mmetric "github.com/AlexBond702/order-service/internal/app/monitor/metric"
 	"github.com/AlexBond702/order-service/internal/app/processor"
 	rprocessor "github.com/AlexBond702/order-service/internal/app/processor/http"
 	mmonitor "github.com/AlexBond702/order-service/internal/app/processor/monitor"
 	"github.com/AlexBond702/order-service/internal/app/repository"
 	rcpostgres "github.com/AlexBond702/order-service/internal/app/repository/conn/postgres"
 	porder "github.com/AlexBond702/order-service/internal/app/repository/order"
+	"github.com/AlexBond702/order-service/internal/app/util"
+	"github.com/AlexBond702/order-service/internal/pkg/broker"
+	"github.com/AlexBond702/order-service/internal/pkg/broker/codec"
 )
 
 type Builder struct {
@@ -48,6 +53,9 @@ type Builder struct {
 	processors []processor.Processor
 
 	chError chan error
+
+	kafkaClient     *broker.KafkaClient
+	busOrderCreated broker.Bus[entity.EventOrderCreated]
 }
 
 func NewBuilder(cCtx *cli.Context) *Builder {
@@ -104,9 +112,18 @@ func (b *Builder) BuildRepoOrder(injectors ...func(c *config.Config)) {
 
 func (b *Builder) BuildModuleOrder(injectors ...func(c *config.Config)) {
 	b.exec(func(b *Builder) {
-		repoModule := morder.NewModule(b.orderRepo, b.clientCatalog)
-		b.orderModule = repoModule
-	}, b.orderRepo)
+		orderMetrics, err := mmetric.NewPrometheusOrder(prometheus.DefaultRegisterer)
+		if err != nil {
+			b.err = fmt.Errorf("init product metrics: %w", err)
+			return
+		}
+		b.orderModule = morder.NewModule(
+			b.orderRepo,
+			b.clientCatalog,
+			orderMetrics,
+			b.busOrderCreated,
+		)
+	}, b.orderRepo, b.clientCatalog, b.busOrderCreated)
 }
 
 func (b *Builder) BuildHandlerHttpOrder() {
@@ -161,7 +178,7 @@ func (b *Builder) BuildMonitorPrometheus() {
 			log.Warn().Msg("Prometheus metrics disabled")
 			return
 		}
-		prometheus := metric.NewPrometheusObserver()
+		prometheus := mmetric.NewPrometheusObserver()
 		b.processors = append(b.processors, prometheus)
 	})
 }
@@ -195,6 +212,38 @@ func (b *Builder) buildConfig(args config.LoadArgs, injectors []func(*config.Con
 		}
 	}
 	b.cfg = config.Root
+}
+
+func (b *Builder) BuildBrokerKafka() {
+	b.exec(func(b *Builder) {
+		cfg := b.cfg.Broker.Kafka
+		kafkaClient, err := broker.NewKafkaClient(broker.KafkaConfig{
+			Addresses:     cfg.Addresses,
+			ConsumerGroup: cfg.ConsumerGroup,
+			ClientID:      cfg.ClientID,
+		})
+		if err != nil {
+			b.err = fmt.Errorf("failed to create kafka client: %w", err)
+			return
+		}
+		b.kafkaClient = kafkaClient
+		topic := cfg.ModelOrder.Created.Topic
+		group := broker.Coalesce(cfg.ModelOrder.Created.ConsumerGroup, cfg.ConsumerGroup)
+
+		bus, err := broker.NewBus[entity.EventOrderCreated](
+			kafkaClient,
+			codec.NewCodecJson[entity.EventOrderCreated](),
+			topic,
+			group)
+		if err != nil {
+			b.err = fmt.Errorf("failed to create newbus: %w", err)
+			return
+		}
+		b.busOrderCreated = bus
+	})
+	b.processors = append(b.processors, processor.ProcessorFunc(func(ctx context.Context, wg *sync.WaitGroup) {
+		processor.WatchForShutdown(ctx, wg, util.CloserFunc(b.kafkaClient.Close))
+	}))
 }
 
 func (b *Builder) exec(cb func(b *Builder), requiredArgs ...any) {
