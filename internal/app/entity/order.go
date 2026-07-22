@@ -80,10 +80,9 @@ type ResponseOrderItem struct {
 	UnitPrice   float64   `json:"unit_price"`
 }
 type RequestOrderCreate struct {
-	UserGUID      uuid.UUID          `json:"user_guid" binding:"omitempty,uuid"`
-	DeliveryPrice float64            `json:"delivery_price" binding:"required,numeric,ne=0,gt=0"`
-	Currency      string             `json:"currency" binding:"omitempty,max=255"`
-	Items         []RequestOrderItem `json:"items" binding:"required"`
+	UserGUID uuid.UUID          `json:"user_guid" binding:"omitempty,uuid"`
+	Currency string             `json:"currency" binding:"omitempty,max=255"`
+	Items    []RequestOrderItem `json:"items" binding:"required"`
 }
 type RequestOrderUpdate struct {
 	ID     int64  `json:"id" binding:"required"`

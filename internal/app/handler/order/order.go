@@ -40,7 +40,6 @@ func (h *handlerOrder) Create(c *gin.Context) {
 	response, err := h.moduleOrder.Create(
 		c.Request.Context(),
 		req.UserGUID,
-		req.DeliveryPrice,
 		req.Currency,
 		items)
 	if err != nil {

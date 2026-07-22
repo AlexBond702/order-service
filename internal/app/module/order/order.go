@@ -36,13 +36,13 @@ func NewModule(repoOrder repository.Order,
 	}
 }
 
-func (m *module) Create(ctx context.Context, userGUID uuid.UUID, deliveryPrice float64, currency string, items []entity.OrderItem) (entity.ResponseOrderCreate, error) {
+func (m *module) Create(ctx context.Context, userGUID uuid.UUID, currency string, items []entity.OrderItem) (entity.ResponseOrderCreate, error) {
 	createMetric := m.metrics.Create()
 	if err := m.validateProductsWithCatalog(ctx, items); err != nil {
 		createMetric.Failed(err)
 		return entity.ResponseOrderCreate{}, err
 	}
-
+	var deliveryPrice float64
 	var CartPrice float64
 	for _, item := range items {
 		CartPrice += item.UnitPrice
@@ -82,7 +82,7 @@ func (m *module) Create(ctx context.Context, userGUID uuid.UUID, deliveryPrice f
 		Currency:   createdOrder.Currency,
 		TotalPrice: int64(createdOrder.TotalPrice),
 		Items:      eventItems,
-		CreatedAt:  createdOrder.CreatedAt.Format(time.RFC3339),
+		CreatedAt:  createdOrder.CreatedAt.UTC().Format(time.RFC3339),
 	}
 	if createdOrder.UserGuid != uuid.Nil {
 		evGuid := (createdOrder.UserGuid).String()
@@ -93,7 +93,7 @@ func (m *module) Create(ctx context.Context, userGUID uuid.UUID, deliveryPrice f
 		entity.BrokerHeaderOrderCreatedType(),
 		entity.BrokerHeaderOrderCreatedEventID())
 	if err != nil {
-		log.Error().EmbedObject(&ev)
+		log.Error().EmbedObject(&ev).Err(err).Msg("failed to Send message")
 		createMetric.PublishFailed()
 	}
 	createMetric.Success(int64(createdOrder.TotalPrice))

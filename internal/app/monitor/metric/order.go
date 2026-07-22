@@ -104,6 +104,12 @@ func (m *orderCreateMetric) Success(price int64) {
 }
 
 func (m *orderCreateMetric) Failed(_ error) {
+	labels := prometheus.Labels{
+		labelResult: createResultError,
+	}
+	m.parent.createTotal.With(labels).Inc()
+	m.parent.createDurationSeconds.With(labels).
+		Observe(time.Since(m.started).Seconds())
 }
 
 func (m *orderCreateMetric) PublishFailed() {
