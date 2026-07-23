@@ -227,6 +227,9 @@ func (b *Builder) BuildBrokerKafka() {
 			return
 		}
 		b.kafkaClient = kafkaClient
+		b.processors = append(b.processors, processor.ProcessorFunc(func(ctx context.Context, wg *sync.WaitGroup) {
+			processor.WatchForShutdown(ctx, wg, util.CloserFunc(b.kafkaClient.Close))
+		}))
 		topic := cfg.ModelOrder.Created.Topic
 		group := broker.Coalesce(cfg.ModelOrder.Created.ConsumerGroup, cfg.ConsumerGroup)
 
@@ -241,9 +244,6 @@ func (b *Builder) BuildBrokerKafka() {
 		}
 		b.busOrderCreated = bus
 	})
-	b.processors = append(b.processors, processor.ProcessorFunc(func(ctx context.Context, wg *sync.WaitGroup) {
-		processor.WatchForShutdown(ctx, wg, util.CloserFunc(b.kafkaClient.Close))
-	}))
 }
 
 func (b *Builder) exec(cb func(b *Builder), requiredArgs ...any) {
