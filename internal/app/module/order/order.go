@@ -5,31 +5,44 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
+	"github.com/rs/zerolog/log"
 
 	"github.com/AlexBond702/order-service/internal/app/client"
 	"github.com/AlexBond702/order-service/internal/app/entity"
 	rmodule "github.com/AlexBond702/order-service/internal/app/module"
+	"github.com/AlexBond702/order-service/internal/app/monitor"
 	"github.com/AlexBond702/order-service/internal/app/repository"
+	"github.com/AlexBond702/order-service/internal/pkg/broker"
 )
 
 type module struct {
-	repoOrder repository.Order
-	client    *client.CatalogClient
+	repoOrder       repository.Order
+	client          *client.CatalogClient
+	metrics         monitor.OrderMetrics
+	busOrderCreated broker.Bus[entity.EventOrderCreated]
 }
 
-func NewModule(repoOrder repository.Order, client *client.CatalogClient) rmodule.Order {
+func NewModule(repoOrder repository.Order,
+	client *client.CatalogClient,
+	metrics monitor.OrderMetrics,
+	busOrderCreated broker.Bus[entity.EventOrderCreated],
+) rmodule.Order {
 	return &module{
-		repoOrder: repoOrder,
-		client:    client,
+		repoOrder:       repoOrder,
+		client:          client,
+		metrics:         metrics,
+		busOrderCreated: busOrderCreated,
 	}
 }
 
-func (m *module) Create(ctx context.Context, userGUID uuid.UUID, deliveryPrice float64, currency string, items []entity.OrderItem) (entity.ResponseOrderCreate, error) {
+func (m *module) Create(ctx context.Context, userGUID uuid.UUID, currency string, items []entity.OrderItem) (entity.ResponseOrderCreate, error) {
+	createMetric := m.metrics.Create()
 	if err := m.validateProductsWithCatalog(ctx, items); err != nil {
+		createMetric.Failed(err)
 		return entity.ResponseOrderCreate{}, err
 	}
-
+	var deliveryPrice float64
 	var CartPrice float64
 	for _, item := range items {
 		CartPrice += item.UnitPrice
@@ -52,8 +65,38 @@ func (m *module) Create(ctx context.Context, userGUID uuid.UUID, deliveryPrice f
 		return txErr
 	})
 	if err != nil {
+		createMetric.Failed(err)
 		return entity.ResponseOrderCreate{}, fmt.Errorf("failed to created order: %w", err)
 	}
+	eventItems := make([]entity.EventOrderCreatedItem, 0, len(createdOrder.Items))
+
+	for _, item := range createdOrder.Items {
+		eventItems = append(eventItems, entity.EventOrderCreatedItem{
+			ProductGUID: item.ProductGUID.String(),
+			Quantity:    item.Quantity,
+			UnitPrice:   int64(item.UnitPrice),
+		})
+	}
+	ev := entity.EventOrderCreated{
+		OrderGUID:  (createdOrder.GUID).String(),
+		Currency:   createdOrder.Currency,
+		TotalPrice: int64(createdOrder.TotalPrice),
+		Items:      eventItems,
+		CreatedAt:  createdOrder.CreatedAt.UTC().Format(time.RFC3339),
+	}
+	if createdOrder.UserGuid != uuid.Nil {
+		evGuid := (createdOrder.UserGuid).String()
+		ev.UserGUID = &evGuid
+	}
+	err = m.busOrderCreated.Send(ctx,
+		&ev,
+		entity.BrokerHeaderOrderCreatedType(),
+		entity.BrokerHeaderOrderCreatedEventID())
+	if err != nil {
+		log.Error().EmbedObject(&ev).Err(err).Msg("failed to Send message")
+		createMetric.PublishFailed()
+	}
+	createMetric.Success(int64(createdOrder.TotalPrice))
 	return m.convertToResponseCreate(createdOrder), nil
 }
 
@@ -119,6 +162,7 @@ func (m *module) convertToResponseCreate(order entity.Order) entity.ResponseOrde
 	response := entity.ResponseOrderCreate{
 		ID:            order.ID,
 		UserGUID:      order.UserGuid,
+		TotalPrice:    order.TotalPrice,
 		DeliveryPrice: order.DeliveryPrice,
 		Status:        order.Status,
 		Currency:      order.Currency,
@@ -139,6 +183,7 @@ func (m *module) convertToResponseCreate(order entity.Order) entity.ResponseOrde
 func (m *module) convertToResponseUpdate(order entity.Order) entity.ResponseOrderUpdate {
 	response := entity.ResponseOrderUpdate{
 		UserGUID:      order.UserGuid,
+		TotalPrice:    order.TotalPrice,
 		DeliveryPrice: order.DeliveryPrice,
 		Status:        order.Status,
 		CreatedAt:     order.CreatedAt.Format(time.RFC3339),
@@ -177,7 +222,7 @@ func (m *module) validateProductsWithCatalog(ctx context.Context, items []entity
 }
 
 func (m *module) validatePriceBeforeShipping(ctx context.Context, order entity.Order) error {
-	productGuids := make([]uuid.UUID, len(order.Items))
+	productGuids := make([]uuid.UUID, 0, len(order.Items))
 	for _, item := range order.Items {
 		productGuids = append(productGuids, item.ProductGUID)
 	}
@@ -194,3 +239,21 @@ func (m *module) validatePriceBeforeShipping(ctx context.Context, order entity.O
 	}
 	return nil
 }
+
+//nolint:unused
+type noopOrderMetrics struct{}
+
+//nolint:unused
+type noopOrderCreateMetric struct{}
+
+//nolint:unused
+func (noopOrderMetrics) Create() monitor.OrderCreateMetric { return noopOrderCreateMetric{} }
+
+//nolint:unused
+func (noopOrderCreateMetric) Success(int64) {}
+
+//nolint:unused
+func (noopOrderCreateMetric) Failed(error) {}
+
+//nolint:unused
+func (noopOrderCreateMetric) PublishFailed() {}
