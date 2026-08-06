@@ -3,6 +3,7 @@ package porder
 import (
 	"context"
 
+	"github.com/gofrs/uuid/v5"
 	"gorm.io/gorm"
 
 	"github.com/AlexBond702/order-service/internal/app/entity"
@@ -79,4 +80,24 @@ func (r *repoPg) Delete(ctx context.Context, id int64) error {
 		return entity.ErrNotFound
 	}
 	return nil
+}
+
+func (r *repoPg) ApplyUpdateOrder(ctx context.Context, orderGUID uuid.UUID, deliveryPrice int64) (bool, error) {
+	db := rcpostgres.GetTxFromContext(ctx, r.db)
+	result := db.WithContext(ctx).
+		Model(&entity.Order{}).
+		Where("guid=?", orderGUID).
+		Where("status=?", entity.OrderStatusPending).
+		Updates(map[string]any{
+			"delivery_price": deliveryPrice,
+			"status":         entity.OrderStatusDeliveryCalculated,
+		})
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return false, nil
+	}
+	return true, nil
 }

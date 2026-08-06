@@ -18,3 +18,7 @@ type Order interface {
 type Metered interface {
 	ProvideMetrics(fact promauto.Factory) []entity.MetricObservation
 }
+
+type UpdateDelivery interface {
+	ApplyUpdateDelivery(ctx context.Context, orderGUID uuid.UUID, deliveryPrice int64) (bool, error)
+}
