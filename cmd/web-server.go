@@ -36,6 +36,7 @@ func cmdWebServer(cCtx *cli.Context) error {
 	app.BuildRepoOrder()
 	app.BuildCatalogClient()
 	app.BuildBrokerKafka()
+	app.BuildBusOrderCreated()
 	app.BuildModuleOrder()
 	app.BuildHandlerHttpOrder()
 

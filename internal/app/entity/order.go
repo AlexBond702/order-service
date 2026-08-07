@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	OrderStatusPending   = "pending"
-	OrderStatusCancelled = "cancelled"
-	OrderStatusDelivered = "delivered"
-	OrderStatusShipped   = "shipped"
+	OrderStatusPending            = "pending"
+	OrderStatusCancelled          = "cancelled"
+	OrderStatusDelivered          = "delivered"
+	OrderStatusShipped            = "shipped"
+	OrderStatusDeliveryCalculated = "delivery_calculated"
 )
 
 // //////////////////////////////////////////////////////////////////////////////
@@ -122,6 +123,19 @@ func (e EventOrderCreated) MarshalZerologObject(ev *zerolog.Event) {
 		Str("currency", e.Currency).
 		Int64("total_price", e.TotalPrice).
 		Int("items_count", len(e.Items))
+}
+
+type EventOrderDeliveryCalculated struct {
+	OrderGUID     string `json:"order_guid"`
+	DeliveryPrice int64  `json:"delivery_price"`
+	Currency      string `json:"currency"`
+	CalculatedAt  string `json:"calculated_at"`
+}
+
+func (e EventOrderDeliveryCalculated) MarshalZerologObject(ev *zerolog.Event) {
+	ev.Str("order_guid", e.OrderGUID).
+		Int64("delivery_price", e.DeliveryPrice).
+		Str("currency", e.Currency)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

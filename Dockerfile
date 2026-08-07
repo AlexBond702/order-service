@@ -31,4 +31,4 @@ COPY --from=builder /app/app .
 EXPOSE 9020
 
 
-ENTRYPOINT ["./app","web-server"]
+ENTRYPOINT ["./app"]

@@ -18,12 +18,15 @@ import (
 	"github.com/AlexBond702/order-service/internal/app/constant"
 	"github.com/AlexBond702/order-service/internal/app/entity"
 	rhandler "github.com/AlexBond702/order-service/internal/app/handler"
+	ehandler "github.com/AlexBond702/order-service/internal/app/handler/event/order"
 	hhealth "github.com/AlexBond702/order-service/internal/app/handler/health"
 	horder "github.com/AlexBond702/order-service/internal/app/handler/order"
 	"github.com/AlexBond702/order-service/internal/app/module"
+	eorder "github.com/AlexBond702/order-service/internal/app/module/event/order"
 	morder "github.com/AlexBond702/order-service/internal/app/module/order"
 	mmetric "github.com/AlexBond702/order-service/internal/app/monitor/metric"
 	"github.com/AlexBond702/order-service/internal/app/processor"
+	emonitor "github.com/AlexBond702/order-service/internal/app/processor/event"
 	rprocessor "github.com/AlexBond702/order-service/internal/app/processor/http"
 	mmonitor "github.com/AlexBond702/order-service/internal/app/processor/monitor"
 	"github.com/AlexBond702/order-service/internal/app/repository"
@@ -54,8 +57,10 @@ type Builder struct {
 
 	chError chan error
 
-	kafkaClient     *broker.KafkaClient
-	busOrderCreated broker.Bus[entity.EventOrderCreated]
+	kafkaClient                *broker.KafkaClient
+	busOrderCreated            broker.Bus[entity.EventOrderCreated]
+	busOrderDeliveryCalculated broker.Bus[entity.EventOrderDeliveryCalculated]
+	updateOrderDeliveryService module.UpdateDelivery
 }
 
 func NewBuilder(cCtx *cli.Context) *Builder {
@@ -126,6 +131,13 @@ func (b *Builder) BuildModuleOrder(injectors ...func(c *config.Config)) {
 	}, b.orderRepo, b.clientCatalog, b.busOrderCreated)
 }
 
+func (b *Builder) BuildOrderCalculatedService() {
+	b.exec(func(b *Builder) {
+		srv := eorder.NewServiceUpdateDelivery(b.orderRepo)
+		b.updateOrderDeliveryService = srv
+	}, b.orderRepo)
+}
+
 func (b *Builder) BuildHandlerHttpOrder() {
 	b.exec(func(b *Builder) {
 		b.orderHandler = horder.NewHandler(b.orderModule)
@@ -170,6 +182,13 @@ func (b *Builder) BuildProcHttp() {
 		procHttp := rprocessor.NewHttp(b.otelServiceName, b.healthHandler, b.orderHandler, b.cfg.Processor.WebServer)
 		b.processors = append(b.processors, procHttp)
 	}, b.healthHandler, b.orderHandler)
+}
+
+func (b *Builder) BuildProcHttpAdmin() {
+	b.exec(func(b *Builder) {
+		proc := rprocessor.NewHttp(b.otelServiceName, b.healthHandler, nil, b.cfg.Processor.WebServer)
+		b.processors = append(b.processors, proc)
+	}, b.healthHandler)
 }
 
 func (b *Builder) BuildMonitorPrometheus() {
@@ -230,20 +249,49 @@ func (b *Builder) BuildBrokerKafka() {
 		b.processors = append(b.processors, processor.ProcessorFunc(func(ctx context.Context, wg *sync.WaitGroup) {
 			processor.WatchForShutdown(ctx, wg, util.CloserFunc(b.kafkaClient.Close))
 		}))
+	})
+}
+
+func (b *Builder) BuildBusOrderCreated() {
+	b.exec(func(b *Builder) {
+		cfg := b.cfg.Broker.Kafka
 		topic := cfg.ModelOrder.Created.Topic
 		group := broker.Coalesce(cfg.ModelOrder.Created.ConsumerGroup, cfg.ConsumerGroup)
 
 		bus, err := broker.NewBus[entity.EventOrderCreated](
-			kafkaClient,
+			b.kafkaClient,
 			codec.NewCodecJson[entity.EventOrderCreated](),
 			topic,
 			group)
 		if err != nil {
-			b.err = fmt.Errorf("failed to create newbus: %w", err)
+			b.err = fmt.Errorf("failed to create bus order.created: %w", err)
 			return
 		}
 		b.busOrderCreated = bus
-	})
+	}, b.kafkaClient)
+}
+
+func (b *Builder) BuildConsumerOrderDeliveryCalculated() {
+	b.exec(func(b *Builder) {
+		cfg := b.cfg.Broker.Kafka
+		topic := cfg.ModelOrder.Delivery.Topic
+		group := broker.Coalesce(cfg.ModelOrder.Delivery.ConsumerGroup, cfg.ConsumerGroup)
+
+		bus, err := broker.NewBus[entity.EventOrderDeliveryCalculated](
+			b.kafkaClient,
+			codec.NewCodecJson[entity.EventOrderDeliveryCalculated](),
+			topic,
+			group,
+		)
+		if err != nil {
+			b.err = err
+			return
+		}
+		b.busOrderDeliveryCalculated = bus
+
+		handler := ehandler.NewHandlerOrderDelivery(b.updateOrderDeliveryService)
+		b.processors = append(b.processors, emonitor.NewProc(handler, b.busOrderDeliveryCalculated))
+	}, b.kafkaClient, b.updateOrderDeliveryService)
 }
 
 func (b *Builder) exec(cb func(b *Builder), requiredArgs ...any) {
