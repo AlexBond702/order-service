@@ -28,7 +28,7 @@ func NewProc(h rhandler.OrderDelivery,
 
 func (o *orderDeliveryCalculateProc) StartAsync(ctx context.Context, wg *sync.WaitGroup) {
 	if err := o.bus.Subscribe(ctx, wg, o.h.CallbackOrderDelivery); err != nil {
-		log.Fatal().Err(err).Msg("order.delivery.calculate: failed to start subscribe")
+		log.Fatal().Err(err).Msg("order.delivery.calculated: failed to start subscribe")
 	}
 	log.Info().Str("queue_name", o.bus.QueueName()).Msg("subscribe requested")
 }

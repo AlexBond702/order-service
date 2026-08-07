@@ -186,7 +186,7 @@ func (b *Builder) BuildProcHttp() {
 
 func (b *Builder) BuildProcHttpAdmin() {
 	b.exec(func(b *Builder) {
-		proc := rprocessor.NewHttpAdmin(b.otelServiceName, b.healthHandler, b.cfg.Processor.WebServer)
+		proc := rprocessor.NewHttp(b.otelServiceName, b.healthHandler, nil, b.cfg.Processor.WebServer)
 		b.processors = append(b.processors, proc)
 	}, b.healthHandler)
 }

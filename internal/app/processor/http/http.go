@@ -51,11 +51,12 @@ func NewHttp(
 	GenericRegHealthCheck(router, hHealth)
 	GenericRegPprof(router)
 	GenericRegMetrics(router)
-	v1 := router.Group("/v1")
-	{
-		v1GenericRegOrder(v1, hOrder)
+	if hOrder != nil {
+		v1 := router.Group("/v1")
+		{
+			v1GenericRegOrder(v1, hOrder)
+		}
 	}
-
 	logRoutes(router)
 
 	addr := fmt.Sprintf("%s:%v", cfg.Host, cfg.ListenPort)
